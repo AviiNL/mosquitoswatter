@@ -44,6 +44,7 @@ jobs:
             platform: macos-latest
             archive: tar.gz
             name: x86_64-apple-darwin
+
     runs-on: ${{ matrix.platform }}
     steps:
       - name: Clone test repository
@@ -51,9 +52,11 @@ jobs:
 
       - name: Setup Rust toolchain and cache
         uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: nightly
 
       - name: Build
-        run: cargo build -r
+        run: cargo +nightly -Z unstable-options b -r --out-dir ./release
 
       - name: Collect windows artifacts
         if: matrix.platform == 'windows-latest'
