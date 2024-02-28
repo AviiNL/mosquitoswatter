@@ -60,11 +60,11 @@ jobs:
 
       - name: Collect windows artifacts
         if: matrix.platform == 'windows-latest'
-        run: Compress-Archive -Path $env:GITHUB_WORKSPACE/release/* -DestinationPath $env:GITHUB_WORKSPACE/mosquitoswatter_{{ matrix.name }}.{{ matrix.archive }}
+        run: Compress-Archive -Path $env:GITHUB_WORKSPACE/release/* -DestinationPath $env:GITHUB_WORKSPACE/mosquitoswatter_${{ matrix.name }}.${{ matrix.archive }}
 
       - name: Collect linux artifacts
         if: matrix.platform != 'windows-latest'
-        run: tar -czvf ${GITHUB_WORKSPACE}/mosquitoswatter_{{ matrix.name }}.{{ matrix.archive }} -C ${GITHUB_WORKSPACE}/release/ .
+        run: tar -czvf ${GITHUB_WORKSPACE}/mosquitoswatter_${{ matrix.name }}.${{ matrix.archive }} -C ${GITHUB_WORKSPACE}/release/ .
 
       - name: Upload artifacts
         uses: ncipollo/release-action@v1
