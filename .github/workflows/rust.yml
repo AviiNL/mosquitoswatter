@@ -67,7 +67,7 @@ jobs:
       - name: Collect linux/macos artifacts
         if: matrix.platform != 'windows-latest'
         run: |
-          cp $env:GITHUB_WORKSPACE/.env.example $env:GITHUB_WORKSPACE/release/.env
+          cp ${GITHUB_WORKSPACE}/.env.example ${GITHUB_WORKSPACE}/release/.env
           tar -czvf ${GITHUB_WORKSPACE}/mosquitoswatter_${{ matrix.name }}.${{ matrix.archive }} -C ${GITHUB_WORKSPACE}/release/ .
 
       - name: Upload artifacts
