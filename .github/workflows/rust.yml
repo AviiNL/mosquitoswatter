@@ -37,7 +37,7 @@ jobs:
           - target: x86_64-unknown-linux-gnu
             suffix: linux-x86_64
             platform: ubuntu-latest
-            archive: tar.xz
+            archive: tar.gz
             name: x86_64-unknown-linux-gnu
           - target: x86_64-apple-darwin
             suffix: darwin-x86_64
