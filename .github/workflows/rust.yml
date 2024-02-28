@@ -31,27 +31,40 @@ jobs:
         include:
           - target: x86_64-pc-windows-gnu
             suffix: windows-x86_64
+            platform: windows-latest
             archive: zip
             name: x86_64-pc-windows-gnu
           - target: x86_64-unknown-linux-gnu
             suffix: linux-x86_64
+            platform: ubuntu-latest
             archive: tar.xz
             name: x86_64-unknown-linux-gnu
           - target: x86_64-apple-darwin
             suffix: darwin-x86_64
+            platform: macos-latest
             archive: tar.gz
             name: x86_64-apple-darwin
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.platform }}
     steps:
       - name: Clone test repository
-        uses: actions/checkout@v2
-      - uses: xhaiker/rust-release.action@v1.0.0
-        name: build ${{ matrix.name }}
+        uses: actions/checkout@v3
+
+      - name: Setup Rust toolchain and cache
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Build
+        run: cargo build -r
+
+      - name: Collect windows artifacts
+        if: matrix.platform == 'windows-latest'
+        run: Compress-Archive -Path $env:GITHUB_WORKSPACE/release/* -DestinationPath $env:GITHUB_WORKSPACE/mosquitoswatter_{{ matrix.name }}.{{ matrix.archive }}
+
+      - name: Collect linux artifacts
+        if: matrix.platform != 'windows-latest'
+        run: tar -czvf ${GITHUB_WORKSPACE}/mosquitoswatter_{{ matrix.name }}.{{ matrix.archive }} -C ${GITHUB_WORKSPACE}/release/ .
+
+      - name: Upload artifacts
+        uses: ncipollo/release-action@v1
         with:
-          release: ${{ github.ref_name }}
-          rust_target: ${{ matrix.target }}
-          archive_suffix: ${{ matrix.suffix }}
-          archive_types: ${{ matrix.archive }}
-          extra_files: "README.md README_zh.md LICENSE"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          commit: main
+          artifacts: "mosquitoswatter_{{ matrix.name }}.{{ matrix.archive }}"
