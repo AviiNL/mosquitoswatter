@@ -69,4 +69,5 @@ jobs:
       - name: Upload artifacts
         uses: ncipollo/release-action@v1
         with:
+          allowUpdates: true
           artifacts: "mosquitoswatter_{{ matrix.name }}.{{ matrix.archive }}"
