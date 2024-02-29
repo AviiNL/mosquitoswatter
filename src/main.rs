@@ -2,9 +2,9 @@ use rand::Rng;
 use serde::Deserialize;
 use serenity::{
     all::{
-        Command, CommandOptionType, Context, CreateCommand, CreateCommandOption,
-        CreateInteractionResponse, CreateInteractionResponseMessage, EventHandler, GatewayIntents,
-        Interaction, Ready, ResolvedOption, ResolvedValue,
+        CommandOptionType, Context, CreateCommand, CreateCommandOption, CreateInteractionResponse,
+        CreateInteractionResponseMessage, EventHandler, GatewayIntents, Guild, GuildId, Http,
+        Interaction, Ready, ResolvedValue, UnavailableGuild,
     },
     async_trait, Client,
 };
@@ -22,23 +22,26 @@ impl EventHandler for Handler {
             let mut width = 11;
             let mut height = 9;
             let mut mosquitos = 10;
+            let mut private = true;
 
             for option in command.data.options() {
-                let ResolvedOption {
-                    value: ResolvedValue::Integer(i),
-                    name,
-                    ..
-                } = option
-                else {
-                    continue;
-                };
-
-                match name {
-                    "width" => width = i,
-                    "height" => height = i,
-                    "mosquitos" => mosquitos = i,
+                let name = option.name;
+                match option.value {
+                    ResolvedValue::Integer(value) => {
+                        match name {
+                            "width" => width = value,
+                            "height" => height = value,
+                            "mosquitos" => mosquitos = value,
+                            _ => (),
+                        };
+                    }
+                    ResolvedValue::Boolean(value) => {
+                        if name == "private" {
+                            private = value
+                        }
+                    }
                     _ => (),
-                };
+                }
             }
 
             let quote = get_quote().await;
@@ -49,7 +52,7 @@ impl EventHandler for Handler {
                     quote,
                     generate_board(width as usize, height as usize, mosquitos as usize,)
                 ))
-                .ephemeral(false);
+                .ephemeral(private); // this oughtta be a setting per server (or even per-user?)
 
             let builder = CreateInteractionResponse::Message(data);
 
@@ -59,13 +62,29 @@ impl EventHandler for Handler {
         }
     }
 
-    async fn ready(&self, ctx: Context, ready: Ready) {
-        println!("{} is connected!", ready.user.name);
+    async fn guild_create(&self, ctx: Context, guild: Guild, _: Option<bool>) {
+        println!("Added to {}", guild.name);
 
-        if let Err(e) = Command::create_global_command(
-            &ctx.http,
-            CreateCommand::new("mosquitoswatter")
-                .description("Don't step on a mosquito!")
+        if let Err(e) = load(&ctx.http, guild.id).await {
+            eprintln!("{:#?}", e);
+        };
+    }
+
+    async fn guild_delete(&self, _ctx: Context, guild: UnavailableGuild, _: Option<Guild>) {
+        println!("Removed from {:?}", guild.id);
+    }
+
+    async fn ready(&self, _ctx: Context, ready: Ready) {
+        println!("{} is connected!", ready.user.name);
+    }
+}
+
+async fn load(http: impl AsRef<Http>, guild_id: GuildId) -> Result<(), Box<dyn std::error::Error>> {
+    guild_id
+        .set_commands(
+            http,
+            vec![CreateCommand::new("mosquitoswatter")
+                .description("Don't get bit by a mosquito!")
                 .add_option(
                     CreateCommandOption::new(
                         CommandOptionType::Integer,
@@ -95,13 +114,19 @@ impl EventHandler for Handler {
                     .min_int_value(1)
                     .max_int_value(99)
                     .required(false),
-                ),
+                )
+                .add_option(
+                    CreateCommandOption::new(
+                        CommandOptionType::Boolean,
+                        "private",
+                        "Reply with a message only you can see (default: true)",
+                    )
+                    .required(false),
+                )],
         )
-        .await
-        {
-            eprintln!("{:#?}", e);
-        }
-    }
+        .await?;
+
+    Ok(())
 }
 
 #[tokio::main]
@@ -112,13 +137,13 @@ async fn main() {
 
     let token = std::env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
 
-    let mut client = Client::builder(token, GatewayIntents::empty())
+    let mut client = Client::builder(token, GatewayIntents::GUILDS)
         .event_handler(Handler)
         .await
         .expect("Error creating client");
 
     if let Err(why) = client.start().await {
-        println!("Client error: {why:?}");
+        eprintln!("Client error: {why:?}");
     }
 }
 
