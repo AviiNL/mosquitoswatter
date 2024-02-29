@@ -2,6 +2,8 @@
 
 A minesweeper clone for discord but instead of mines, you'll get stung by a mosquito.
 
+![Screenshot](screenshot.png)
+
 # Invite link
 
 [Add to your server](https://discord.com/oauth2/authorize?client_id=1212506405240836199&scope=bot)
