@@ -52,7 +52,7 @@ impl EventHandler for Handler {
                     quote,
                     generate_board(width as usize, height as usize, mosquitos as usize,)
                 ))
-                .ephemeral(private); // this oughtta be a setting per server (or even per-user?)
+                .ephemeral(private);
 
             let builder = CreateInteractionResponse::Message(data);
 
