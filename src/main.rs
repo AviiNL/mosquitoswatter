@@ -2,9 +2,9 @@ use rand::Rng;
 use serde::Deserialize;
 use serenity::{
     all::{
-        CommandOptionType, Context, CreateCommand, CreateCommandOption, CreateInteractionResponse,
-        CreateInteractionResponseMessage, EventHandler, GatewayIntents, GuildId, Interaction,
-        Ready, ResolvedOption, ResolvedValue,
+        Command, CommandOptionType, Context, CreateCommand, CreateCommandOption,
+        CreateInteractionResponse, CreateInteractionResponseMessage, EventHandler, GatewayIntents,
+        Interaction, Ready, ResolvedOption, ResolvedValue,
     },
     async_trait, Client,
 };
@@ -62,50 +62,42 @@ impl EventHandler for Handler {
     async fn ready(&self, ctx: Context, ready: Ready) {
         println!("{} is connected!", ready.user.name);
 
-        let guild_id = GuildId::new(
-            std::env::var("GUILD_ID")
-                .expect("Expected GUILD_ID in environment")
-                .parse()
-                .expect("GUILD_ID must be an integer"),
-        );
-
-        if let Err(e) = guild_id
-            .set_commands(
-                &ctx.http,
-                vec![CreateCommand::new("mosquitoswatter")
-                    .description("Don't step on a mosquito!")
-                    .add_option(
-                        CreateCommandOption::new(
-                            CommandOptionType::Integer,
-                            "width",
-                            "Width of the board, between 3 and 11 (default: 11)",
-                        )
-                        .min_int_value(3)
-                        .max_int_value(11)
-                        .required(false),
+        if let Err(e) = Command::create_global_command(
+            &ctx.http,
+            CreateCommand::new("mosquitoswatter")
+                .description("Don't step on a mosquito!")
+                .add_option(
+                    CreateCommandOption::new(
+                        CommandOptionType::Integer,
+                        "width",
+                        "Width of the board, between 3 and 11 (default: 11)",
                     )
-                    .add_option(
-                        CreateCommandOption::new(
-                            CommandOptionType::Integer,
-                            "height",
-                            "Height of the board, between 3 and 9 (default: 9)",
-                        )
-                        .min_int_value(3)
-                        .max_int_value(9)
-                        .required(false),
+                    .min_int_value(3)
+                    .max_int_value(11)
+                    .required(false),
+                )
+                .add_option(
+                    CreateCommandOption::new(
+                        CommandOptionType::Integer,
+                        "height",
+                        "Height of the board, between 3 and 9 (default: 9)",
                     )
-                    .add_option(
-                        CreateCommandOption::new(
-                            CommandOptionType::Integer,
-                            "mosquitos",
-                            "Amount of mosquitos, between 1 and (width*height-1) (default: 10)",
-                        )
-                        .min_int_value(1)
-                        .max_int_value(99)
-                        .required(false),
-                    )],
-            )
-            .await
+                    .min_int_value(3)
+                    .max_int_value(9)
+                    .required(false),
+                )
+                .add_option(
+                    CreateCommandOption::new(
+                        CommandOptionType::Integer,
+                        "mosquitos",
+                        "Amount of mosquitos, between 1 and (width*height-1) (default: 10)",
+                    )
+                    .min_int_value(1)
+                    .max_int_value(99)
+                    .required(false),
+                ),
+        )
+        .await
         {
             eprintln!("{:#?}", e);
         }
@@ -114,7 +106,7 @@ impl EventHandler for Handler {
 
 #[tokio::main]
 async fn main() {
-    dotenvy::dotenv().expect("error");
+    dotenvy::dotenv().ok(); // fail silently
 
     println!("https://discord.com/oauth2/authorize?client_id=1212506405240836199&scope=bot");
 
