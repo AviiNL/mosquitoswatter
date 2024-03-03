@@ -1,4 +1,4 @@
-use rand::Rng;
+use minesweeper_lib::*;
 use serde::Deserialize;
 use serenity::{
     all::{
@@ -23,6 +23,7 @@ impl EventHandler for Handler {
             let mut height = 9;
             let mut mosquitos = 10;
             let mut private = true;
+            let mut seed: Option<String> = None;
 
             for option in command.data.options() {
                 let name = option.name;
@@ -40,18 +41,39 @@ impl EventHandler for Handler {
                             private = value
                         }
                     }
+                    ResolvedValue::String(value) => {
+                        if name == "seed" {
+                            seed = Some(value.to_string())
+                        }
+                    }
                     _ => (),
                 }
             }
 
-            let quote = get_quote().await;
+            let width = width.min(11).max(1);
+            let height = height.min(9).max(1);
+            let mosquitos = mosquitos.min((width * height) - 1).max(1);
+            let seed = seed.unwrap_or(get_quote().await);
+
+            let minesweeper = Minesweeper::random_seed(
+                width as usize,
+                height as usize,
+                mosquitos as usize,
+                seed.clone(),
+            );
+
+            let board = minesweeper.get_board();
+            let mut as_str = String::new();
+
+            for row in board.get_rows() {
+                for tile in row.get_tiles() {
+                    as_str.push_str(&format!("||{}||", &from_tile(tile)));
+                }
+                as_str.push('\n');
+            }
 
             let data = CreateInteractionResponseMessage::new()
-                .content(format!(
-                    "{}\n{}",
-                    quote,
-                    generate_board(width as usize, height as usize, mosquitos as usize,)
-                ))
+                .content(format!("{}\n{}", seed, as_str))
                 .ephemeral(private);
 
             let builder = CreateInteractionResponse::Message(data);
@@ -122,6 +144,14 @@ async fn load(http: impl AsRef<Http>, guild_id: GuildId) -> Result<(), Box<dyn s
                         "Reply with a message only you can see (default: true)",
                     )
                     .required(false),
+                )
+                .add_option(
+                    CreateCommandOption::new(
+                        CommandOptionType::String,
+                        "seed",
+                        "Random seed used to generate the board (default: None)",
+                    )
+                    .required(false),
                 )],
         )
         .await?;
@@ -179,68 +209,17 @@ async fn inner_get_quote() -> Result<String, Box<dyn std::error::Error>> {
     Ok(first_result.clone().content)
 }
 
-fn generate_board(cols: usize, rows: usize, mosquitos: usize) -> String {
-    let mut output = String::new();
-
-    let rows = rows.min(9).max(3);
-    let cols = cols.min(11).max(3);
-    let total = rows * cols;
-
-    let num_mosquitos = mosquitos.max(1).min(total - 1);
-
-    let mut mosquitos = vec![];
-
-    while mosquitos.len() < num_mosquitos {
-        let num = rand::thread_rng().gen_range(0..total);
-
-        if mosquitos.contains(&num) {
-            continue; // generate a new one
-        }
-
-        mosquitos.push(num);
-    }
-
-    for y in 0..rows {
-        for x in 0..cols {
-            if mosquitos.contains(&((y * cols) + x)) {
-                output += "||:mosquito:||";
-                continue;
-            }
-
-            let icon = to_emoji(check_neigbors(&mosquitos, cols, (x, y)));
-
-            output += &format!("||{}||", icon).to_string();
-        }
-        output += "\n";
-    }
-
-    output
-}
-
-fn check_neigbors(mosquitos: &[usize], cols: usize, pos: (usize, usize)) -> usize {
-    let mut count = 0;
-    for y in pos.1.max(1) - 1..=pos.1 + 1 {
-        for x in pos.0.max(1) - 1..=(pos.0 + 1).min(cols - 1) {
-            let index = &((y * cols) + x);
-            if mosquitos.contains(index) {
-                count += 1;
-            }
-        }
-    }
-
-    count
-}
-
-fn to_emoji(count: usize) -> String {
-    match count {
-        1 => String::from(":one:"),
-        2 => String::from(":two:"),
-        3 => String::from(":three:"),
-        4 => String::from(":four:"),
-        5 => String::from(":five:"),
-        6 => String::from(":six:"),
-        7 => String::from(":seven:"),
-        8 => String::from(":eight:"),
-        _ => String::from(":zero:"),
+fn from_tile(tile: &Tile) -> String {
+    match tile {
+        Tile::Mine => String::from(":mosquito:"),
+        Tile::One => String::from(":one:"),
+        Tile::Two => String::from(":two:"),
+        Tile::Three => String::from(":three:"),
+        Tile::Four => String::from(":four:"),
+        Tile::Five => String::from(":five:"),
+        Tile::Six => String::from(":six:"),
+        Tile::Seven => String::from(":seven:"),
+        Tile::Eight => String::from(":eight:"),
+        Tile::Empty => String::from(":zero:"),
     }
 }

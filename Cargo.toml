@@ -1,3 +1,5 @@
+workspace = { members = ["minesweeper-lib"] }
+
 [package]
 name = "mosquito-swatter"
 version = "0.1.0"
@@ -7,7 +9,6 @@ edition = "2021"
 
 [dependencies]
 dotenvy = "0.15.7"
-rand = "0.8.5"
 reqwest = { version = "0.11.23", default-features = false, features = [
     "json",
     "rustls-tls",
@@ -22,3 +23,4 @@ serenity = { version = "0.12.0", default-features = false, features = [
     "collector",
 ] }
 tokio = { version = "1.36.0", features = ["full"] }
+minesweeper-lib.path = "./minesweeper-lib"
